@@ -1,15 +1,33 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
-beegfs_repo_file = "/etc/yum.repos.d/beegfs.repo"
-beegfs_rpm_gpg_key = node['beegfs']['rpm_gpg_key']
 
-remote_file "BeeGFS repo file" do
-    path beegfs_repo_file
-    source node['beegfs']['repo_file_url']
-end
+if node['platform_family'] == 'debian'
+  beegfs_repo_file = "/etc/apt/sources.list.d/beegfs-deb9.list"
+  beegfs_deb_gpg_key = node['beegfs']['deb_gpg_key']
+  
+  remote_file "BeeGFS repo file" do
+      path beegfs_repo_file
+      source node['beegfs']['repo_file_url']
+  end
 
-execute "Import rpm gpg key" do
-    command "rpm --import #{beegfs_rpm_gpg_key}"
+  execute "Import deb gpg key" do
+      command "apt-key add #{beegfs_deb_gpg_key}"
+  end
+                                                                                           
+else
+
+  beegfs_repo_file = "/etc/yum.repos.d/beegfs.repo"
+  beegfs_rpm_gpg_key = node['beegfs']['rpm_gpg_key']
+
+  remote_file "BeeGFS repo file" do
+      path beegfs_repo_file
+      source node['beegfs']['repo_file_url']
+  end
+
+  execute "Import rpm gpg key" do
+      command "rpm --import #{beegfs_rpm_gpg_key}"
+  end
+
 end
 
 include_recipe "::_search_manager"

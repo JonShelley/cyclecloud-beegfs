@@ -1,25 +1,38 @@
 include_recipe "::default"
 %w{beegfs-client beegfs-helperd beegfs-utils gcc gcc-c++}.each { |p| package p }
 
-# Problem with some images running an outdated kernel version,
-# where the kernel headers don't exist in the repos anymore.
-# Enable the Centos Vault repos
 
-# Add the centos vault mirrors for the platform version we are on
-%w(os updates).each do |id|
-  yum_repository "centos-#{node[:platform_version]}-#{id}" do
-    baseurl "http://vault.centos.org/#{node[:platform_version]}/#{id}/$basearch/"
-    gpgkey "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-#{node[:platform_version].to_i}"
-    action :create
-    not_if "yum list kernel-devel-$(uname -r)"
+if node['platform_family'] == 'debian'
+
+  # apt search linux-headers-$(uname -r)
+  apt_package "linux-headers-generic" do
+    action :install
   end
-end 
+  
+else
 
-# Install the kernel-devel package for our platform
-execute "Installing kernel-devel version that matches kernel" do
-  command 'yum install -y "kernel-devel-uname-r == $(uname -r)"'
-  not_if "rpm -qa | grep kernel-devel | grep $(uname -r)"
+  # Problem with some images running an outdated kernel version,
+  # where the kernel headers don't exist in the repos anymore.
+  # Enable the Centos Vault repos
+
+  # Add the centos vault mirrors for the platform version we are on
+  %w(os updates).each do |id|
+    yum_repository "centos-#{node[:platform_version]}-#{id}" do
+      baseurl "http://vault.centos.org/#{node[:platform_version]}/#{id}/$basearch/"
+      gpgkey "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-#{node[:platform_version].to_i}"
+      action :create
+      not_if "yum list kernel-devel-$(uname -r)"
+    end
+  end 
+
+  # Install the kernel-devel package for our platform
+  execute "Installing kernel-devel version that matches kernel" do
+    command 'yum install -y "kernel-devel-uname-r == $(uname -r)"'
+    not_if "rpm -qa | grep kernel-devel | grep $(uname -r)"
+  end
+  
 end
+
 
 service "beegfs-helperd" do
   action [:enable, :start]
